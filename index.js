@@ -1,5 +1,30 @@
 let map;
 
+
+
+function scrollMap(userMarker, position) {
+  const { latitude, longitude } = position.coords;
+          let latlng = new google.maps.LatLng(latitude, longitude);
+          userMarker.setPosition(latlng);
+          userMarker.map = map;
+}
+
+function handleError(error) {
+  // Display error based on the error code.
+  const { code } = error;
+  switch (code) {
+    case GeolocationPositionError.TIMEOUT:
+      // Handle timeout.
+      break;
+    case GeolocationPositionError.PERMISSION_DENIED:
+      // User denied the request.
+      break;
+    case GeolocationPositionError.POSITION_UNAVAILABLE:
+      // Position not available.
+      break;
+  }
+}
+
 const getCurrentPosition = () => {
   return new Promise((res, rej)=>{
     navigator.geolocation.getCurrentPosition(
@@ -13,6 +38,44 @@ const getCurrentPosition = () => {
     );
   })
 };
+
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
+
+
+function getLatLonGivenDistanceAndBearing(lat, lon, x, y){
+ //Earth’s radius in meters, sphere
+ const R=6378137
+
+ //Coordinate offsets in radians
+ const dLat = y / R;
+ const dLon = x / (R * Math.cos(Math.PI * lat / 180));
+
+ //OffsetPosition, decimal degrees
+ const latO = lat + dLat * 180 / Math.PI;
+ const lonO = lon + dLon * 180 / Math.PI;
+
+ return {
+  lat: latO, 
+  lng: lonO 
+  };
+}
+
 
 const circleXY = (r, angle) => {
   // Convert angle to radians
@@ -60,7 +123,6 @@ const generateRandomMarkers = (lat, lng, distanceInMeters = 100)=>{
   }
 }
 
-
 async function initMap()  {
   const {latitude: lat, longitude: lng} = await getCurrentPosition();
   console.log(lat, lng);
@@ -79,162 +141,126 @@ async function initMap()  {
   });
 
   generateRandomMarkers(lat, lng, 100);
+
+  const watchId = navigator.geolocation.watchPosition(
+    scrollMap.bind(userMarker), handleError
+  );
 }
 
+
+initMap();
+// window.initMap = initMap;
+// x++;
 
 // Initialize and add the map
-function initMap3({lat, lng, mapContainer}) {
-  const mapEl = document.getElementById(mapContainer);
+// function initMap3({lat, lng, mapContainer}) {
+//   const mapEl = document.getElementById(mapContainer);
   
-  const map = new google.maps.Map(mapEl,
-    {
-      zoom: 18,
-      center: {lat, lng}
-    }
-    );
+//   const map = new google.maps.Map(mapEl,
+//     {
+//       zoom: 18,
+//       center: {lat, lng}
+//     }
+//     );
     
-    return map;
-  }
+//     return map;
+//   }
   
   
-  function initMap4() {
-    const position = 
-      navigator.geolocation.getCurrentPosition(
-      // callback with coordinates
-      (position)=>{
-        const currentLocation = { 
-          lat: position.coords.latitude, 
-          lng: position.coords.longitude 
-        };
-        const map = initMap3({...currentLocation, mapContainer: 'map'});
+//   function initMap4() {
+//     const position = 
+//       navigator.geolocation.getCurrentPosition(
+//       // callback with coordinates
+//       (position)=>{
+//         const currentLocation = { 
+//           lat: position.coords.latitude, 
+//           lng: position.coords.longitude 
+//         };
+//         const map = initMap3({...currentLocation, mapContainer: 'map'});
 
-        const userMarker = new google.maps.Marker({
-          position: currentLocation,
-          map: map,
-        });
+//         const userMarker = new google.maps.Marker({
+//           position: currentLocation,
+//           map: map,
+//         });
 
-        const iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
-        const noteMarkers = [];
+//         const iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
+//         const noteMarkers = [];
 
-        console.log(currentLocation);
-        // generate random notes within a radius
-        for (let i = 0; i < 10; i ++){
-          let n = (Math.floor(Math.random() * 100) + 1)/10000;
-          let posOrNeg = Math.round(Math.random());
-          const lat = posOrNeg ? currentLocation.lat + n : currentLocation.lat - n
+//         console.log(currentLocation);
+//         // generate random notes within a radius
+//         for (let i = 0; i < 10; i ++){
+//           let n = (Math.floor(Math.random() * 100) + 1)/10000;
+//           let posOrNeg = Math.round(Math.random());
+//           const lat = posOrNeg ? currentLocation.lat + n : currentLocation.lat - n
           
-          n = (Math.floor(Math.random() * 100) + 1)/10000;
-          posOrNeg = Math.round(Math.random());
-          const lng = posOrNeg ? currentLocation.lng + n : currentLocation.lng - n
+//           n = (Math.floor(Math.random() * 100) + 1)/10000;
+//           posOrNeg = Math.round(Math.random());
+//           const lng = posOrNeg ? currentLocation.lng + n : currentLocation.lng - n
 
-          const distance = getDistanceFromLatLonInKm(currentLocation.lat, currentLocation.lng, lat, lng )/1.609;
+//           const distance = getDistanceFromLatLonInKm(currentLocation.lat, currentLocation.lng, lat, lng )/1.609;
 
-          console.log(lat, lng, distance);
-          const pos = {
-            lat,
-            lng
-          }
+//           console.log(lat, lng, distance);
+//           const pos = {
+//             lat,
+//             lng
+//           }
 
           
 
-          const marker = new google.maps.Marker({
-            position: {
-              ...pos
-            },
-            title: `Latitude: ${lat} | Longitude: ${lng}`,
-            map: map,
-            animation: google.maps.Animation.DROP,
-            icon: iconBase + "library_maps.png"
-          });
+//           const marker = new google.maps.Marker({
+//             position: {
+//               ...pos
+//             },
+//             title: `Latitude: ${lat} | Longitude: ${lng}`,
+//             map: map,
+//             animation: google.maps.Animation.DROP,
+//             icon: iconBase + "library_maps.png"
+//           });
 
 
-          const contentString = `
-          <div>
-            <p>Latitude: ${lat.toFixed(3)}</p>
-            <p>Longitude: ${lng.toFixed(3)}</p>
-            <p>Distance: ${distance.toFixed(2)} miles</p>
-          </div>`;
+//           const contentString = `
+//           <div>
+//             <p>Latitude: ${lat.toFixed(3)}</p>
+//             <p>Longitude: ${lng.toFixed(3)}</p>
+//             <p>Distance: ${distance.toFixed(2)} miles</p>
+//           </div>`;
 
-          const infowindow = new google.maps.InfoWindow({
-            content: contentString,
-            ariaLabel: "pos",
-          });
+//           const infowindow = new google.maps.InfoWindow({
+//             content: contentString,
+//             ariaLabel: "pos",
+//           });
 
-          marker.addListener("click", () => {
-            infowindow.open({
-              anchor: marker,
-              map,
-            });
-          });
+//           marker.addListener("click", () => {
+//             infowindow.open({
+//               anchor: marker,
+//               map,
+//             });
+//           });
 
-          noteMarkers.push(marker);
-        }
+//           noteMarkers.push(marker);
+//         }
   
-        // const timer = setInterval(()=>{
-        //   console.log('tick');
-        //   console.log(currentLocation);
-        //   currentLocation.lat += .01;
-        //   currentLocation.lng += .01;
+//         // const timer = setInterval(()=>{
+//         //   console.log('tick');
+//         //   console.log(currentLocation);
+//         //   currentLocation.lat += .01;
+//         //   currentLocation.lng += .01;
 
-        //   let latlng = new google.maps.LatLng(currentLocation.lat, currentLocation.lng);
-        //   marker.setTitle("Latitude:" + currentLocation.lat +" | Longitude:" + currentLocation.lng);
-        //   marker.setPosition(latlng);
+//         //   let latlng = new google.maps.LatLng(currentLocation.lat, currentLocation.lng);
+//         //   marker.setTitle("Latitude:" + currentLocation.lat +" | Longitude:" + currentLocation.lng);
+//         //   marker.setPosition(latlng);
 
-        //   // marker.setPosition(currentLocation);
-        //   // marker.map = map;
-        // }, 3000)
-      },
-      (error) => console.warn(`ERROR(${error.code}): ${error.message}`),
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
+//         //   // marker.setPosition(currentLocation);
+//         //   // marker.map = map;
+//         // }, 3000)
+//       },
+//       (error) => console.warn(`ERROR(${error.code}): ${error.message}`),
+//       {
+//         enableHighAccuracy: true,
+//         timeout: 5000,
+//         maximumAge: 0
+//       }
 
       
-    );
-  }
-
-
-function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
-  var R = 6371; // Radius of the earth in km
-  var dLat = deg2rad(lat2-lat1);  // deg2rad below
-  var dLon = deg2rad(lon2-lon1); 
-  var a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2)
-    ; 
-  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  var d = R * c; // Distance in km
-  return d;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI/180)
-}
-
-
-function getLatLonGivenDistanceAndBearing(lat, lon, de, dn){
-// console.log(lat, lon);
- //Earth’s radius, sphere
- const R=6378137
-
- //offsets in meters
-//  const dn = 10
-//  const de = 9
-
- //Coordinate offsets in radians
- const dLat = dn/R;
- const dLon = de/(R*Math.cos(Math.PI*lat/180));
-
- //OffsetPosition, decimal degrees
- const latO = lat + dLat * 180/Math.PI;
- const lonO = lon + dLon * 180/Math.PI;
-//  console.log(latO,lonO);
- return {lat: latO, lng: lonO };
-}
-
-// window.initMap = initMap;
-initMap();
-// x++;
+//     );
+//   }
